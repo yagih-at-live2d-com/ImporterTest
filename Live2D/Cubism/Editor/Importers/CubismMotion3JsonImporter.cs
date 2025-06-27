@@ -9,7 +9,7 @@
 using Live2D.Cubism.Framework.Json;
 using System;
 using System.IO;
-using System.Threading.Tasks;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 
@@ -240,7 +240,7 @@ namespace Live2D.Cubism.Editor.Importers
             {
                 while (assetList.onPostImporting)
                 {
-                    Task.Delay(1);
+                    System.Threading.Thread.Sleep(1);
                 }
 
                 assetListIndex = assetList.AssetPaths.Contains(motionPath)

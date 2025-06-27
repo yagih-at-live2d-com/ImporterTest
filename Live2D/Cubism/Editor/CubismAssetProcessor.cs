@@ -59,7 +59,9 @@ namespace Live2D.Cubism.Editor
             var assetList = CubismCreatedAssetList.GetInstance();
 
             // Handle any imported Cubism assets.
-            foreach (var assetPath in importedAssetPaths)
+            var orderedAssetPaths = ImporterUtility.OrderCubismAssetPaths(importedAssetPaths);
+
+            foreach (var assetPath in orderedAssetPaths)
             {
                 var importer = CubismImporter.GetImporterAtPath(assetPath);
 
