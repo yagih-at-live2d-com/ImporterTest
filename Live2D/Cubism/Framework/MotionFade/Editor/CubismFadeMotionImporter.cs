@@ -30,8 +30,8 @@ namespace Live2D.Cubism.Framework.MotionFade
         [InitializeOnLoadMethod]
         private static void RegisterMotionImporter()
         {
-            CubismImporter.OnDidImportModel += OnModelImport;
-            CubismImporter.OnDidImportMotion += OnFadeMotionImport;
+            ImporterUtility.RegisterModelImportHandler(OnModelImport, 0);
+            ImporterUtility.RegisterMotionImportHandler(OnFadeMotionImport, 0);
         }
 
         #endregion
@@ -87,7 +87,7 @@ namespace Live2D.Cubism.Framework.MotionFade
             var modelName = Path.GetFileName(modelDir);
             var fadeMotionListPath = modelDir + "/" + modelName + ".fadeMotionList.asset";
 
-            var fadeMotions = GetFadeMotionList(fadeMotionListPath);
+            var fadeMotions = ImporterUtility.GetOrCreateFadeMotionList(fadeMotionListPath);
 
             if (fadeMotions == null)
             {
@@ -199,7 +199,7 @@ namespace Live2D.Cubism.Framework.MotionFade
             var modelName = Path.GetFileName(modelDir);
             var fadeMotionListPath = modelDir + "/" + modelName + ".fadeMotionList.asset";
 
-            var fadeMotions = GetFadeMotionList(fadeMotionListPath);
+            var fadeMotions = ImporterUtility.GetOrCreateFadeMotionList(fadeMotionListPath);
 
             if (fadeMotions == null)
             {
@@ -247,33 +247,7 @@ namespace Live2D.Cubism.Framework.MotionFade
 
             // Add animation event
             {
-                var sourceAnimationEvents = AnimationUtility.GetAnimationEvents(animationClip);
-                var index = -1;
-
-                for(var i = 0; i < sourceAnimationEvents.Length; ++i)
-                {
-                    if(sourceAnimationEvents[i].functionName != "InstanceId")
-                    {
-                        continue;
-                    }
-
-                    index = i;
-                    break;
-                }
-
-                if(index == -1)
-                {
-                    index = sourceAnimationEvents.Length;
-                    Array.Resize(ref sourceAnimationEvents, sourceAnimationEvents.Length + 1);
-                    sourceAnimationEvents[sourceAnimationEvents.Length - 1] = new AnimationEvent();
-                }
-
-                sourceAnimationEvents[index].time = 0;
-                sourceAnimationEvents[index].functionName = "InstanceId";
-                sourceAnimationEvents[index].intParameter = instanceId;
-                sourceAnimationEvents[index].messageOptions = SendMessageOptions.DontRequireReceiver;
-
-                AnimationUtility.SetAnimationEvents(animationClip, sourceAnimationEvents);
+                ImporterUtility.EnsureInstanceIdEvent(animationClip, instanceId);
             }
         }
 
@@ -295,45 +269,6 @@ namespace Live2D.Cubism.Framework.MotionFade
             return animatorController;
         }
 
-        /// <summary>
-        /// Load the .fadeMotionList.
-        /// If it does not exist, create a new one.
-        /// </summary>
-        /// <param name="fadeMotionListPath">The path of the .fadeMotionList.asset relative to the project.</param>
-        /// <returns>.fadeMotionList.asset.</returns>
-        private static CubismFadeMotionList GetFadeMotionList(string fadeMotionListPath)
-        {
-            var assetList = CubismCreatedAssetList.GetInstance();
-            var assetListIndex = assetList.AssetPaths.Contains(fadeMotionListPath)
-                ? assetList.AssetPaths.IndexOf(fadeMotionListPath)
-                : -1;
-
-            CubismFadeMotionList fadeMotions = null;
-
-            if (assetListIndex < 0)
-            {
-                fadeMotions = AssetDatabase.LoadAssetAtPath<CubismFadeMotionList>(fadeMotionListPath);
-
-                if (fadeMotions == null)
-                {
-                    // Create reference list.
-                    fadeMotions = ScriptableObject.CreateInstance<CubismFadeMotionList>();
-                    fadeMotions.MotionInstanceIds = new int[0];
-                    fadeMotions.CubismFadeMotionObjects = new CubismFadeMotionData[0];
-                    AssetDatabase.CreateAsset(fadeMotions, fadeMotionListPath);
-                }
-
-                assetList.Assets.Add(fadeMotions);
-                assetList.AssetPaths.Add(fadeMotionListPath);
-                assetList.IsImporterDirties.Add(true);
-            }
-            else
-            {
-                fadeMotions = (CubismFadeMotionList)assetList.Assets[assetListIndex];
-            }
-
-            return fadeMotions;
-        }
 
         /// <summary>
         /// Create an instance of <see cref="CubismFadeMotionData"/> and save it as .fade.asset.

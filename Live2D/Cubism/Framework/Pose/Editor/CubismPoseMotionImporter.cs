@@ -32,7 +32,7 @@ namespace Live2D.Cubism.Editor.Importers
         [InitializeOnLoadMethod]
         private static void RegisterModelImporter()
         {
-            CubismImporter.OnDidImportModel += OnModelImport;
+            ImporterUtility.RegisterModelImportHandler(OnModelImport, 1);
         }
 
         #endregion
@@ -133,33 +133,7 @@ namespace Live2D.Cubism.Editor.Importers
                 {
                     var instanceId = newAnimationClip.GetInstanceID();
 
-                    var sourceAnimationEvents = AnimationUtility.GetAnimationEvents(newAnimationClip);
-                    var index = -1;
-
-                    for(var j = 0; j < sourceAnimationEvents.Length; ++j)
-                    {
-                        if(sourceAnimationEvents[j].functionName != "InstanceId")
-                        {
-                            continue;
-                        }
-
-                        index = j;
-                        break;
-                    }
-
-                    if(index == -1)
-                    {
-                        index = sourceAnimationEvents.Length;
-                        Array.Resize(ref sourceAnimationEvents, sourceAnimationEvents.Length + 1);
-                        sourceAnimationEvents[sourceAnimationEvents.Length - 1] = new AnimationEvent();
-                    }
-
-                    sourceAnimationEvents[index].time = 0;
-                    sourceAnimationEvents[index].functionName = "InstanceId";
-                    sourceAnimationEvents[index].intParameter = instanceId;
-                    sourceAnimationEvents[index].messageOptions = SendMessageOptions.DontRequireReceiver;
-
-                    AnimationUtility.SetAnimationEvents(newAnimationClip, sourceAnimationEvents);
+                    ImporterUtility.EnsureInstanceIdEvent(newAnimationClip, instanceId);
                 }
 
 
@@ -185,33 +159,7 @@ namespace Live2D.Cubism.Editor.Importers
                 var modelName = Path.GetFileName(modelDir).ToString();
                 var fadeMotionListPath = Path.GetDirectoryName(directoryName).ToString() + "/" + modelName + ".fadeMotionList.asset";
 
-                assetList = CubismCreatedAssetList.GetInstance();
-                assetListIndex = assetList.AssetPaths.Contains(fadeMotionListPath)
-                    ? assetList.AssetPaths.IndexOf(fadeMotionListPath)
-                    : -1;
-
-                CubismFadeMotionList fadeMotions = null;
-                if (assetListIndex < 0)
-                {
-                    fadeMotions = AssetDatabase.LoadAssetAtPath<CubismFadeMotionList>(fadeMotionListPath);
-
-                    if (fadeMotions == null)
-                    {
-                        // Create reference list.
-                        fadeMotions = ScriptableObject.CreateInstance<CubismFadeMotionList>();
-                        fadeMotions.MotionInstanceIds = new int[0];
-                        fadeMotions.CubismFadeMotionObjects = new CubismFadeMotionData[0];
-                        AssetDatabase.CreateAsset(fadeMotions, fadeMotionListPath);
-                    }
-                    assetList.Assets.Add(fadeMotions);
-                    assetList.AssetPaths.Add(fadeMotionListPath);
-                    assetList.IsImporterDirties.Add(true);
-                }
-                else
-                {
-                    fadeMotions = (CubismFadeMotionList)assetList.Assets[assetListIndex];
-                }
-
+                var fadeMotions = ImporterUtility.GetOrCreateFadeMotionList(fadeMotionListPath);
                 if (fadeMotions == null)
                 {
                     Debug.LogError("CubismPoseMotionImporter : Can not create CubismFadeMotionList.");
